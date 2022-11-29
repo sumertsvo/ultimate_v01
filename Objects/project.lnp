@@ -5,10 +5,10 @@
 ".\objects\at32f421_crm.o"
 ".\objects\at32f421_gpio.o"
 ".\objects\at32f421_misc.o"
+".\objects\at32f421_tmr.o"
 ".\objects\at32f421_wdt.o"
 ".\objects\startup_at32f421.o"
 ".\objects\system_at32f421.o"
-".\objects\at32f421_tmr.o"
 --strict --scatter ".\Objects\project.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

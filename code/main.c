@@ -114,7 +114,9 @@ uint16_t buffer_write[TEST_BUFEER_SIZE];
 uint16_t buffer_read[TEST_BUFEER_SIZE];
 error_status err_status;
 
- uint16_t adc_result_0;
+uint16_t adc_result_out;
+uint16_t adc_result_opto;
+char sensor_index;
 
 
 void gpio_set(gpio_type *PORT, uint32_t PIN, gpio_drive_type DRIVE, gpio_mode_type MODE, gpio_output_type OUT_TYPE, gpio_pull_type PULL ) {
@@ -209,10 +211,7 @@ void hardware_init() {
 
 
 
-void minute_tick() {
 
-   
-}
 
 
 void sec_work() {
@@ -230,6 +229,20 @@ void ms_tick() {
 
     static uint64_t ms1000_count = 0;
 
+	
+	if (sensor_index == 1)
+            {
+                adc_ordinary_channel_set(ADC1,ADC_CHANNEL_4,1,ADC_SAMPLETIME_239_5);
+                sensor_index = 0;
+
+            }
+            else
+            {
+                adc_ordinary_channel_set(ADC1,ADC_CHANNEL_2,1,ADC_SAMPLETIME_239_5);
+                sensor_index = 1;
+            }
+	
+	
     if (ms1000_count == 1000) {
 		
         ms1000_count = 0;
@@ -259,9 +272,14 @@ void ms_tick() {
 
 void ADC1_CMP_IRQHandler(void) {
   //  wdt_counter_reload();
-      
-        adc_result_0	= adc_ordinary_conversion_data_get(ADC1);
-
+      if(sensor_index==0)
+    {
+        adc_result_opto	= adc_ordinary_conversion_data_get(ADC1);
+    }
+    else
+    {
+        adc_result_out	= adc_ordinary_conversion_data_get(ADC1);
+    }
 }
 
 
@@ -322,7 +340,7 @@ start_setup();
   while(1)
   {  
 	  
-//	hardware_work();  
+	hardware_work();  
 	 
   }
 }
