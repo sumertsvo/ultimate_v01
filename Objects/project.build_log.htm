@@ -17,7 +17,7 @@ Library Manager: ArmAr.exe V5.06 update 5 (build 528)
 Hex Converter:   FromElf.exe V5.06 update 5 (build 528)
 CPU DLL:         SARMCM3.DLL V5.24.1
 Dialog DLL:      DCM.DLL V1.16.0.0
-Target DLL:      UL2CM3.DLL V1.160.3.0
+Target DLL:      CMSIS_AGDI.dll V1.28.3.0
 Dialog DLL:      TCM.DLL V1.32.0.0
  
 <h2>Project:</h2>
@@ -27,17 +27,19 @@ Project File Date:  11/24/2022
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Rebuild target 'Target 1'
-compiling at32f421_clock.c...
-compiling at32f421_wdt.c...
 compiling main.c...
+compiling at32f421_wdt.c...
 compiling at32f421_misc.c...
-compiling at32f421_adc.c...
 compiling at32f421_gpio.c...
+compiling at32f421_clock.c...
+compiling at32f421_adc.c...
 compiling at32f421_crm.c...
 assembling startup_at32f421.s...
 compiling system_at32f421.c...
+compiling at32f421_tmr.c...
 linking...
-Program Size: Code=1508 RO-data=252 RW-data=4 ZI-data=1636  
+Program Size: Code=3064 RO-data=252 RW-data=80 ZI-data=1632  
+FromELF: creating hex file...
 ".\Objects\project.axf" - 0 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
@@ -54,6 +56,7 @@ Package Vendor: ArteryTek
                 ArteryTek AT32F421 Series Device Support,Drivers
    * Component: startup Version: 2.0.0
    * Component: wdt Version: 2.0.0
+   * Component: tmr Version: 2.0.0
    * Component: misc Version: 2.0.0
    * Component: gpio Version: 2.0.0
    * Component: crm Version: 2.0.0
@@ -78,21 +81,25 @@ Package Vendor: ArteryTek
       Include file:  Device\Firmware\Peripherals\inc\at32f421_wdt.h
       Source file:   Device\Firmware\Peripherals\src\at32f421_wdt.c
 
+   * Component: ArteryTek::Device:at32f421_firmware_library:tmr:2.0.0
+      Include file:  Device\Firmware\Peripherals\inc\at32f421_tmr.h
+      Source file:   Device\Firmware\Peripherals\src\at32f421_tmr.c
+
    * Component: ArteryTek::Device:at32f421_firmware_library:misc:2.0.0
       Include file:  Device\Firmware\Peripherals\inc\at32f421_misc.h
       Source file:   Device\Firmware\Peripherals\src\at32f421_misc.c
 
    * Component: ArteryTek::Device:at32f421_firmware_library:gpio:2.0.0
-      Include file:  Device\Firmware\Peripherals\inc\at32f421_gpio.h
       Source file:   Device\Firmware\Peripherals\src\at32f421_gpio.c
+      Include file:  Device\Firmware\Peripherals\inc\at32f421_gpio.h
 
    * Component: ArteryTek::Device:at32f421_firmware_library:crm:2.0.0
       Include file:  Device\Firmware\Peripherals\inc\at32f421_crm.h
       Source file:   Device\Firmware\Peripherals\src\at32f421_crm.c
 
    * Component: ArteryTek::Device:at32f421_firmware_library:adc:2.0.0
-      Include file:  Device\Firmware\Peripherals\inc\at32f421_adc.h
       Source file:   Device\Firmware\Peripherals\src\at32f421_adc.c
+      Include file:  Device\Firmware\Peripherals\inc\at32f421_adc.h
 
    * Component: ArteryTek::Device:at32f421_conf:2.0.0
       Include file:  Device\Include\at32f421_conf.h
