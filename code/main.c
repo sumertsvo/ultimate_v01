@@ -2,7 +2,7 @@
 
 
 //#define DEBUG
-//#define DEBUG_PCB
+#define DEBUG_PCB
 //#define DEBUG_AUTOROTATION
 
 
@@ -16,21 +16,25 @@
 
 #else
 
-#define PIN_MOTOR_4	GPIOA,GPIO_PINS_3	 
-#define	PIN_MOTOR_1	GPIOA,GPIO_PINS_4	
+#define PIN_MOTOR_4	GPIOA,GPIO_PINS_0	 
+#define	PIN_MOTOR_1	GPIOA,GPIO_PINS_1	
 
 
-#define PIN_OUT		GPIOA,GPIO_PINS_2		 
-#define	PIN_OPTO  GPIOA,GPIO_PINS_1
+#define PIN_OUT	 GPIOA,GPIO_PINS_4		 
+#define	PIN_OPTO  GPIOA,GPIO_PINS_2
 #endif
 
 
 
 
-#define TEST_BUFEER_SIZE                 1024
-#define TEST_FLASH_ADDRESS_START         (0x08003000)
 
 
+#define OPTO_MIN 0x0400
+#define OUT_MIN 0x0C00
+//const  uint16_t OPTO_MIN   = 12000;
+//const uint16_t OUT_MIN	   =45000;
+const uint8_t	DELAY_COUNT       =3;
+	
 static union {
     uint32_t value;
     struct {
@@ -76,43 +80,19 @@ static union {
 /*_____________________________________________________________________*/
 
 
-
-
-/*TIMES*/
-
-/*sec_div*/
-uint32_t time_rotation;
-unsigned time_relay_power; 
-unsigned time_relay_control;
-unsigned time_relay_gap;
-
-uint64_t tone_gap_millis;
-char sec_count = 0;
-char time_melody; //minute
-char time_moving_wait;
-
-
-/*ms_div*/
-
 uint64_t millis = 0 ;
-unsigned ms_tone_delay = 0;
+
 /*_____________________________________________________________________*/
 
 
 
-/*counters*/
-char beep_short_count;
-char beep_long_count;
-char beep_double_count;
 
 /*¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦*/
 /*¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦*/
 
 /*SERVICE*/
 
-uint16_t buffer_write[TEST_BUFEER_SIZE];
-uint16_t buffer_read[TEST_BUFEER_SIZE];
-error_status err_status;
+
 
 uint16_t adc_result_out;
 uint16_t adc_result_opto;
@@ -153,7 +133,7 @@ void timer_init() {
 
 void hardware_init() {
 	
-	/*
+	 /*
 #ifndef DEBUG
     wdt_register_write_enable(TRUE);
     wdt_divider_set(WDT_CLK_DIV_8);
@@ -161,9 +141,10 @@ void hardware_init() {
     wdt_enable();
     wdt_counter_reload();
 #endif
-       */
+     //*/ 
 	
     crm_periph_clock_enable(CRM_GPIOA_PERIPH_CLOCK,TRUE);
+	crm_periph_clock_enable(CRM_GPIOB_PERIPH_CLOCK,TRUE);
     crm_periph_clock_enable(CRM_ADC1_PERIPH_CLOCK,TRUE);
     crm_periph_clock_enable(CRM_TMR6_PERIPH_CLOCK,TRUE);
 	
@@ -196,32 +177,17 @@ void hardware_init() {
 
     nvic_irq_enable(ADC1_CMP_IRQn,37,38);
 	
-	  adc_base_config_type *adc1;
+	adc_base_config_type *adc1;
     adc_base_default_para_init(adc1);
     adc_base_config(ADC1,adc1);
 
     adc_enable(ADC1,TRUE);
     adc_interrupt_enable(ADC1,ADC_CCE_INT,TRUE);
-    adc_ordinary_channel_set(ADC1,ADC_CHANNEL_1,1,ADC_SAMPLETIME_239_5);
+    adc_ordinary_channel_set(ADC1,ADC_CHANNEL_2,1,ADC_SAMPLETIME_239_5);
 	
 }
 
 
-
-
-
-
-
-
-
-void sec_work() {
-
-    
-    sec_count++;
-	
-        ff.bits.MOTOR_FORWARD = !ff.bits.MOTOR_FORWARD;
-
-}
 
 
 
@@ -233,25 +199,20 @@ void ms_tick() {
 	if (sensor_index == 1)
             {
                 adc_ordinary_channel_set(ADC1,ADC_CHANNEL_4,1,ADC_SAMPLETIME_239_5);
-                sensor_index = 0;
+				   sensor_index = 0;
+				adc_ordinary_conversion_trigger_set(ADC1,ADC12_ORDINARY_TRIG_SOFTWARE,TRUE);
+              
 
             }
             else
             {
                 adc_ordinary_channel_set(ADC1,ADC_CHANNEL_2,1,ADC_SAMPLETIME_239_5);
-                sensor_index = 1;
+				 sensor_index = 1;
+				 adc_ordinary_conversion_trigger_set(ADC1,ADC12_ORDINARY_TRIG_SOFTWARE,TRUE);
+                
             }
 	
-	
-    if (ms1000_count == 1000) {
-		
-        ms1000_count = 0;
-       
-        sec_work();
-    }
 
-
-    ++ms1000_count;
 
 }
 
@@ -271,21 +232,40 @@ void ms_tick() {
  
 
 void ADC1_CMP_IRQHandler(void) {
-  //  wdt_counter_reload();
+  
       if(sensor_index==0)
     {
-        adc_result_opto	= adc_ordinary_conversion_data_get(ADC1);
+        adc_result_out	= adc_ordinary_conversion_data_get(ADC1);
     }
     else
     {
-        adc_result_out	= adc_ordinary_conversion_data_get(ADC1);
+        adc_result_opto	= adc_ordinary_conversion_data_get(ADC1);
     }
 }
 
 
 void hardware_work() {
 	
-	if (ff.bits.MOVING_ALLOWED)
+static u8 count;	
+	
+	if  (
+		((adc_result_opto <= OPTO_MIN) && (adc_result_out <= OUT_MIN))
+				|| 
+			((adc_result_opto >= OPTO_MIN) && (adc_result_out >= OUT_MIN)) 
+)	//*/
+			    
+		
+{
+	
+     if (count<= DELAY_COUNT) 	 ++count;
+	
+}     else
+{
+	if (count>0 ) --count;
+}
+	
+	
+	if (count>= DELAY_COUNT )
 		{
 		
 		if (ff.bits.MOTOR_FORWARD)
@@ -294,13 +274,17 @@ void hardware_work() {
 				gpio_bits_set(PIN_MOTOR_1);
 				
 			}
-		else
+		else if (ff.bits.MOTOR_BACKWARD)
 			{
 				gpio_bits_reset(PIN_MOTOR_1);
 				gpio_bits_set(PIN_MOTOR_4);
 			}
-
-	}
+		} 
+		else
+			{
+				gpio_bits_reset (PIN_MOTOR_1);
+				gpio_bits_reset (PIN_MOTOR_4);
+			}
 
 }
 
@@ -316,30 +300,27 @@ void start_setup() {
     ff.value = 0;
    
 
-    time_rotation = 0;
-    time_relay_power = 0;
-    time_relay_control = 0;
-    time_relay_gap = 0;
-    ms_tone_delay = 0;
-
-
-    time_melody = 0;
-
 }
 /*¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦*/
 
 
+/*opening
+
+  
+black->white
+
+
+out ffff
+
+//*/
 int main(void) {
 
 start_setup();
    
-    gpio_bits_reset(PIN_MOTOR_1);
-    gpio_bits_set(PIN_MOTOR_4);
-    ff.bits.MOVING_ALLOWED=1;
-	
+  ff.bits.MOTOR_FORWARD =1;
   while(1)
   {  
-	  
+	wdt_counter_reload();  
 	hardware_work();  
 	 
   }
