@@ -22,18 +22,26 @@
 
 #define PIN_OUT	 GPIOA,GPIO_PINS_4		 
 #define	PIN_OPTO  GPIOA,GPIO_PINS_2
+
+
 #endif
-
-
 
 
 
 
 #define OPTO_MIN 0x0400
 #define OUT_MIN 0x0C00
-//const  uint16_t OPTO_MIN   = 12000;
-//const uint16_t OUT_MIN	   =45000;
-const uint8_t	DELAY_COUNT       =3;
+              
+#define	MAX_COUNTER_OPTO 3
+#define MAX_COUNTER_OUT 3			  
+		  
+//for 50gz T=20ms. 20000/500=40
+#define DELAY_500_COUNT 40;			  
+			 
+
+char delay_500mks;	
+
+
 	
 static union {
     uint32_t value;
@@ -41,39 +49,39 @@ static union {
 
         unsigned MOTOR_FORWARD : 1;
         unsigned MOTOR_BACKWARD : 1;
-        unsigned FUN_HIGH : 1;
-        unsigned FUN_LOW : 1;
-        unsigned ALLOW_MEASURE : 1;
-        unsigned ALLOW_FUN : 1;
-        unsigned MEASURING: 1;
-        unsigned TARGET_POS_CLOSED: 1;
+        unsigned ADC_OPTO_ACTIVE: 1;
+        unsigned ADC_OUT_ACTIVE : 1;
+        unsigned DELAY_OUT_POSITIVE: 1;
+        unsigned DELAY_OUT_NEGATIVE: 1;
+        unsigned PIN_OUT_HIGH: 1;
+        unsigned PIN_OPTO_HIGH: 1;
 
-        unsigned TARGET_POS_OPENED: 1;
-        unsigned OPENING : 1;
-        unsigned OPENED : 1;
-        unsigned CLOSING : 1;
-        unsigned CLOSED : 1;
-        unsigned RELAY_POWER_ON : 1;
-        unsigned RELAY_CONTROL_ON : 1;
-        unsigned TONE_ON : 1;
-
-        unsigned TONE_OFF : 1;
-        unsigned SIREN : 1;
-        unsigned ZUM_BUSY : 1;
-        unsigned MOVING_ALLOWED : 1;
         unsigned : 1;
         unsigned : 1;
-        unsigned LED_ON : 1;
-        unsigned SEC_LOCK : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
 
-        unsigned AUTOROTATION_WORK : 1;
-        unsigned MELODY_ON : 1;
-        unsigned  LAST_BEEP_LONG: 1;
-        unsigned  : 1;
-        unsigned  : 1;
-        unsigned  : 1;
-        unsigned  : 1;
-        unsigned  : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
+        unsigned : 1;
     } bits;
 } ff;
 
@@ -94,9 +102,9 @@ uint64_t millis = 0 ;
 
 
 
-uint16_t adc_result_out;
-uint16_t adc_result_opto;
-char sensor_index;
+uint16_t adc_result_out;	//adc_4
+uint16_t adc_result_opto;	//adc_2
+
 
 
 void gpio_set(gpio_type *PORT, uint32_t PIN, gpio_drive_type DRIVE, gpio_mode_type MODE, gpio_output_type OUT_TYPE, gpio_pull_type PULL ) {
@@ -148,6 +156,8 @@ void hardware_init() {
     crm_periph_clock_enable(CRM_ADC1_PERIPH_CLOCK,TRUE);
     crm_periph_clock_enable(CRM_TMR6_PERIPH_CLOCK,TRUE);
 	
+	
+	
 	gpio_set(PIN_MOTOR_4,
              GPIO_DRIVE_STRENGTH_MODERATE,
              GPIO_MODE_OUTPUT,
@@ -173,7 +183,14 @@ void hardware_init() {
              GPIO_PULL_NONE);
 			 
 			 
-			 timer_init();
+	gpio_bits_reset (PIN_MOTOR_1);
+	gpio_bits_reset (PIN_MOTOR_4);
+				
+	
+	
+	timer_init();
+
+
 
     nvic_irq_enable(ADC1_CMP_IRQn,37,38);
 	
@@ -191,38 +208,45 @@ void hardware_init() {
 
 
 
-void ms_tick() {
+void mks500_tick() {
 
-    static uint64_t ms1000_count = 0;
-
+	if ( delay_500mks > 0)
+		
+	{
+        --delay_500mks;
+		adc_ordinary_channel_set(ADC1,ADC_CHANNEL_2,1,ADC_SAMPLETIME_55_5);	
+		ff.bits.ADC_OPTO_ACTIVE = 1;
+		ff.bits.ADC_OUT_ACTIVE = 0;
+	}
 	
-	if (sensor_index == 1)
-            {
-                adc_ordinary_channel_set(ADC1,ADC_CHANNEL_4,1,ADC_SAMPLETIME_239_5);
-				   sensor_index = 0;
-				adc_ordinary_conversion_trigger_set(ADC1,ADC12_ORDINARY_TRIG_SOFTWARE,TRUE);
-              
-
-            }
-            else
-            {
-                adc_ordinary_channel_set(ADC1,ADC_CHANNEL_2,1,ADC_SAMPLETIME_239_5);
-				 sensor_index = 1;
-				 adc_ordinary_conversion_trigger_set(ADC1,ADC12_ORDINARY_TRIG_SOFTWARE,TRUE);
-                
-            }
+	else 
 	
-
-
+	{
+		if (ff.bits.ADC_OUT_ACTIVE) 
+		{
+            adc_ordinary_channel_set(ADC1,ADC_CHANNEL_2,1,ADC_SAMPLETIME_55_5);
+			ff.bits.ADC_OPTO_ACTIVE = 1;
+			ff.bits.ADC_OUT_ACTIVE = 0;
+		}
+		else if (ff.bits.ADC_OPTO_ACTIVE)
+		{
+			adc_ordinary_channel_set(ADC1,ADC_CHANNEL_4,1,ADC_SAMPLETIME_55_5);
+			ff.bits.ADC_OPTO_ACTIVE = 0;
+			ff.bits.ADC_OUT_ACTIVE = 1;
+		}
+		else ff.bits.ADC_OPTO_ACTIVE = 1;		   
+	}
+	
+ adc_ordinary_conversion_trigger_set(ADC1,ADC12_ORDINARY_TRIG_SOFTWARE,TRUE);
 }
 
- void TMR6_GLOBAL_IRQHandler(void) {
+void TMR6_GLOBAL_IRQHandler(void) {
 
     static char i =0;
     ++i;
 
-    if (i>=8) {
-        ms_tick();
+    if (i>=4) {
+        mks500_tick();
         i=0;
     }
 
@@ -232,41 +256,119 @@ void ms_tick() {
  
 
 void ADC1_CMP_IRQHandler(void) {
-  
-      if(sensor_index==0)
-    {
-        adc_result_out	= adc_ordinary_conversion_data_get(ADC1);
-    }
-    else
+    
+if(ff.bits.ADC_OPTO_ACTIVE)
     {
         adc_result_opto	= adc_ordinary_conversion_data_get(ADC1);
     }
+else if(ff.bits.ADC_OUT_ACTIVE)
+    {
+        adc_result_out	= adc_ordinary_conversion_data_get(ADC1);
+    } 
+	
 }
 
+
+void data_work(){
+	
+	static char opto_counter,out_counter;
+	
+	if (ff.bits.ADC_OPTO_ACTIVE) 
+	{
+		
+		if (adc_result_opto >= OPTO_MIN)
+		{
+			if (opto_counter < MAX_COUNTER_OPTO)
+			{
+				 ++opto_counter;
+			}
+			else
+			{
+				 ff.bits.PIN_OPTO_HIGH = 1;
+			}
+		}
+
+		else
+	
+		{
+			 if (opto_counter > -MAX_COUNTER_OPTO)
+			{
+				 --opto_counter;
+			}
+			else
+			{
+				 ff.bits.PIN_OPTO_HIGH = 0;
+			}
+		}
+		
+	
+	}
+	
+
+
+	if(ff.bits.ADC_OUT_ACTIVE)
+	{
+		if (adc_result_out >= OUT_MIN)
+		{
+			 if(out_counter < MAX_COUNTER_OUT)
+			 {
+				 ++out_counter;
+			 }
+			 else
+			 {
+				  if(ff.bits.DELAY_OUT_POSITIVE)
+				  {
+					ff.bits.PIN_OUT_HIGH = 1;  
+				  }
+				  else
+				  {
+					  delay_500mks = DELAY_500_COUNT;
+					  ff.bits.DELAY_OUT_POSITIVE = 1;
+					  ff.bits.DELAY_OUT_NEGATIVE = 0;
+				  }
+				  
+			 }
+		}
+		else
+		{
+			if(out_counter > -MAX_COUNTER_OUT)
+			 {
+				 --out_counter;
+			 }
+			 else
+			 {
+				  if(ff.bits.DELAY_OUT_NEGATIVE)
+				  {
+					ff.bits.PIN_OUT_HIGH = 0;  
+				  }
+				  else
+				  {
+					  delay_500mks = DELAY_500_COUNT;
+					  ff.bits.DELAY_OUT_NEGATIVE = 1;
+					  ff.bits.DELAY_OUT_POSITIVE = 0;
+				  }
+				  
+			 }
+			
+		}
+		
+	}
+	
+	
+	
+	
+	if(ff.bits.PIN_OPTO_HIGH == ff.bits.PIN_OUT_HIGH)
+	{
+		 ff.bits.MOTOR_FORWARD = 1;
+	}
+	else 
+	{
+		 ff.bits.MOTOR_FORWARD = 0;
+	}
+	
+}
 
 void hardware_work() {
-	
-static u8 count;	
-	
-	if  (
-		((adc_result_opto <= OPTO_MIN) && (adc_result_out <= OUT_MIN))
-				|| 
-			((adc_result_opto >= OPTO_MIN) && (adc_result_out >= OUT_MIN)) 
-)	//*/
-			    
-		
-{
-	
-     if (count<= DELAY_COUNT) 	 ++count;
-	
-}     else
-{
-	if (count>0 ) --count;
-}
-	
-	
-	if (count>= DELAY_COUNT )
-		{
 		
 		if (ff.bits.MOTOR_FORWARD)
 			{  
@@ -278,8 +380,7 @@ static u8 count;
 			{
 				gpio_bits_reset(PIN_MOTOR_1);
 				gpio_bits_set(PIN_MOTOR_4);
-			}
-		} 
+			} 
 		else
 			{
 				gpio_bits_reset (PIN_MOTOR_1);
@@ -295,7 +396,7 @@ void start_setup() {
 
 	mx_adc_clock_init(); 
 	
-	hardware_init(); // initialize the device
+	hardware_init(); 
    
     ff.value = 0;
    
@@ -304,23 +405,16 @@ void start_setup() {
 /*¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦¦*/
 
 
-/*opening
 
-  
-black->white
-
-
-out ffff
-
-//*/
 int main(void) {
 
 start_setup();
    
-  ff.bits.MOTOR_FORWARD =1;
+ // ff.bits.MOTOR_FORWARD =1;
   while(1)
   {  
 	wdt_counter_reload();  
+	data_work();
 	hardware_work();  
 	 
   }
